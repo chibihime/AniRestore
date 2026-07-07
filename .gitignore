@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.venv/
+env/
+conda-env/
+
+# Data & checkpoints (never commit large binaries)
+data/raw_covers/
+data/processed/
+*.pth
+*.ckpt
+*.onnx
+checkpoints/
+weights/
+
+# Results / profiling artifacts
+results/
+*.nsys-rep
+*.qdrep
+*.prof
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Env files that may hold secrets (e.g. MAL API keys)
+.env
+*.env.local

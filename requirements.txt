@@ -1,0 +1,15 @@
+# Kaggle Notebooks ship with a working torch+CUDA build already installed —
+# do NOT reinstall torch there unless you need a specific version, since
+# reinstalling can break the preconfigured CUDA/driver pairing.
+# On any other machine (local Linux+NVIDIA, Lambda, etc.) install torch
+# per https://pytorch.org/get-started/locally/ for your CUDA version first.
+
+triton>=2.3.0
+torchvision
+numpy
+opencv-python
+scikit-image
+gradio
+requests
+tqdm
+Pillow
