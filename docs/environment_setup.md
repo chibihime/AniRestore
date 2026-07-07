@@ -35,27 +35,38 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
 
    ```python
    import os
+   import shutil
    from kaggle_secrets import UserSecretsClient
 
    user_secrets = UserSecretsClient()
    gh_pat = user_secrets.get_secret("AniRestore_GH_PAT")
 
    os.chdir("/kaggle/working")
-   if not os.path.exists("/kaggle/working/AniRestore"):
-       !git clone https://{gh_pat}@github.com/chibihime/AniRestore.git
+   shutil.rmtree("/kaggle/working/AniRestore", ignore_errors=True)
+   !git clone https://{gh_pat}@github.com/chibihime/AniRestore.git
    os.chdir("/kaggle/working/AniRestore")
-   !git pull
    !pip install -r requirements.txt
    print(os.getcwd())
+   !ls src
    ```
 
-   Use `os.chdir` with an **absolute path**, not the `%cd AniRestore` magic with a
-   relative path — if a cell that clones+`%cd`s gets re-run in the same session
-   (e.g. after a kernel restart didn't actually happen, or you re-ran the cell
-   by mistake), a relative `%cd` compounds on whatever the cwd already was and
-   silently clones into a nested `AniRestore/AniRestore/`, leaving you one
-   directory level too shallow everywhere else. Always confirm with `!pwd` and
-   `!ls src` before running anything else.
+   Use `os.chdir` with an **absolute path**, never the `%cd AniRestore` magic with
+   a relative path, and always `shutil.rmtree` + fresh-clone rather than
+   `git pull` on a directory that might already exist. Two failure modes this
+   avoids:
+   - A relative `%cd` compounds on whatever the cwd already was if the cell
+     reruns, silently cloning into a nested `AniRestore/AniRestore/`.
+   - Reusing an existing checkout with `git pull` can report "Already up to
+     date" without actually updating the working tree if that checkout was
+     left in a stale/partial state by an earlier interrupted cell run in the
+     same session — this repo is tiny, so there's no real cost to always
+     wiping and re-cloning instead of trying to make `git pull` work reliably
+     against directory state you can't fully see.
+
+   Always confirm with `!ls src` before running anything else — it should list
+   every file/folder actually in the repo (`benchmark.py`, `data_loader.py`,
+   `mal/`, `model/`, `profile_baseline.py`, `run_baseline_inference.py`,
+   `check_env.py`), not just a subset.
 
    Note: do **not** `pip install torch` — Kaggle ships a working torch+CUDA build
    already matched to its driver; reinstalling can break that pairing (see the
@@ -70,6 +81,36 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
    This must print `All checks passed` (GPU visible, CUDA available, a trivial
    Triton kernel compiles and runs correctly) before proceeding to model or kernel
    work.
+
+## Attaching the cover-art dataset
+
+The private `pruthaannadate/anirestore-raw-covers` Kaggle dataset (built from
+`data/raw_covers/`, see `data/README.md`) mounts at a path with an extra
+`datasets/<owner>/` segment on this account's Kaggle environment, **not** the
+flat `/kaggle/input/<slug>/` path older Kaggle docs describe:
+
+```
+/kaggle/input/datasets/pruthaannadate/anirestore-raw-covers
+```
+
+Always confirm with `!ls /kaggle/input/` (and one level deeper) after attaching
+a dataset rather than assuming the flat path — it silently doesn't exist there
+on this environment, and scripts reading `data/raw_covers` will fail with
+`FileNotFoundError` if the symlink points at the wrong place:
+
+```bash
+!rm -f data/raw_covers
+!ln -s /kaggle/input/datasets/pruthaannadate/anirestore-raw-covers data/raw_covers
+!ls data/raw_covers | wc -l   # should print 2000
+```
+
+Also note: uploading a dataset via `kaggle datasets create -p <dir>` uploads
+every file in `<dir>` as a **separate** request — for 2000 small images this
+was unreliably slow and eventually stalled outright. Zipping the folder into a
+single archive first (with a `dataset-metadata.json` alongside it) and
+uploading that instead is far more reliable — Kaggle auto-extracts the zip
+into individual files server-side once the dataset finishes processing
+(confirm with `kaggle datasets status <owner>/<slug>`, wait for `ready`).
 
 ## Weekly quota notes
 
