@@ -14,7 +14,13 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
    required to enable GPU access on notebooks).
 2. Create a new Notebook: **Create > New Notebook**.
 3. In the notebook's **Settings** panel (right sidebar):
-   - **Accelerator**: select `GPU T4 x2` (or `GPU P100` if offered).
+   - **Accelerator**: select `GPU T4 x2`. **Do not select `GPU P100`** — Kaggle's
+     preinstalled PyTorch build (2.10.0+cu128 as of writing) only ships CUDA
+     kernels for compute capability sm_70 and up. The P100 is Pascal (sm_60), so
+     CUDA calls fail with `no kernel image is available for execution on the
+     device` even though `torch.cuda.is_available()` returns `True` (that check
+     only confirms driver visibility, not kernel compatibility). T4 is Turing
+     (sm_75) and works fine with the stock install.
    - **Internet**: turn **ON** (required to `pip install`, clone the repo, and hit
      the MAL API).
    - **Persistence**: "Files only" is fine for iterative work; the notebook session
