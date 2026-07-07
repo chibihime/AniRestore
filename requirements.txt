@@ -13,3 +13,5 @@ gradio
 requests
 tqdm
 Pillow
+python-dotenv
+tenacity
