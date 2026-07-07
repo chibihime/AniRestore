@@ -34,14 +34,28 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
    clone with it:
 
    ```python
+   import os
    from kaggle_secrets import UserSecretsClient
+
    user_secrets = UserSecretsClient()
    gh_pat = user_secrets.get_secret("AniRestore_GH_PAT")
 
-   !git clone https://{gh_pat}@github.com/chibihime/AniRestore.git
-   %cd AniRestore
+   os.chdir("/kaggle/working")
+   if not os.path.exists("/kaggle/working/AniRestore"):
+       !git clone https://{gh_pat}@github.com/chibihime/AniRestore.git
+   os.chdir("/kaggle/working/AniRestore")
+   !git pull
    !pip install -r requirements.txt
+   print(os.getcwd())
    ```
+
+   Use `os.chdir` with an **absolute path**, not the `%cd AniRestore` magic with a
+   relative path — if a cell that clones+`%cd`s gets re-run in the same session
+   (e.g. after a kernel restart didn't actually happen, or you re-ran the cell
+   by mistake), a relative `%cd` compounds on whatever the cwd already was and
+   silently clones into a nested `AniRestore/AniRestore/`, leaving you one
+   directory level too shallow everywhere else. Always confirm with `!pwd` and
+   `!ls src` before running anything else.
 
    Note: do **not** `pip install torch` — Kaggle ships a working torch+CUDA build
    already matched to its driver; reinstalling can break that pairing (see the
