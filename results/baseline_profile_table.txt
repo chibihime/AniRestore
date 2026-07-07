@@ -1,0 +1,33 @@
+Baseline profiler run: Tesla T4, RealESRGAN_x4plus_anime_6B, batch_size=1, input 256x256, 20 profiled forward passes (5 warmup excluded), torch.profiler with CPU+CUDA activities.
+
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------
+                                aten::cudnn_convolution         1.27%      49.154ms         1.93%      74.543ms      38.824us        2.568s        66.16%        2.568s       1.338ms          1920
+_5x_cudnn_volta_scudnn_winograd_128x128_ldg1_ldg4_re...         0.00%       0.000us         0.00%       0.000us       0.000us        2.557s        65.86%        2.557s       1.346ms          1900
+                                              aten::cat         0.50%      19.311ms         0.78%      30.025ms      20.851us     459.848ms        11.85%     459.848ms     319.339us          1440
+void at::native::(anonymous namespace)::CatArrayBatc...         0.00%       0.000us         0.00%       0.000us       0.000us     459.848ms        11.85%     459.848ms     319.339us          1440
+                                             aten::add_         0.44%      17.063ms         0.77%      29.866ms      15.555us     256.677ms         6.61%     256.677ms     133.686us          1920
+void at::native::elementwise_kernel<128, 2, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us     256.677ms         6.61%     256.677ms     133.686us          1920
+                                      aten::leaky_relu_         0.30%      11.636ms         0.55%      21.401ms      14.267us     202.673ms         5.22%     202.673ms     135.116us          1500
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     202.673ms         5.22%     202.673ms     135.116us          1500
+                                            aten::copy_         0.03%       1.201ms        94.28%        3.645s      91.114ms     178.035ms         4.59%     178.102ms       4.453ms            40
+                       Memcpy DtoH (Device -> Pageable)         0.00%       0.000us         0.00%       0.000us       0.000us     176.702ms         4.55%     176.702ms       8.835ms            20
+                                              aten::add         0.13%       4.943ms         0.21%       7.950ms      15.901us     103.992ms         2.68%     103.992ms     207.985us           500
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us     103.992ms         2.68%     103.992ms     207.985us           500
+                                              aten::mul         0.16%       6.173ms         0.25%       9.503ms      19.799us      67.956ms         1.75%      67.956ms     141.574us           480
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us      67.956ms         1.75%      67.956ms     141.574us           480
+                               aten::upsample_nearest2d         0.02%     668.186us         0.03%       1.014ms      25.346us      42.198ms         1.09%      42.198ms       1.055ms            40
+void at::native::(anonymous namespace)::upsample_nea...         0.00%       0.000us         0.00%       0.000us       0.000us      42.198ms         1.09%      42.198ms       1.055ms            40
+void cudnn::winograd::generateWinogradTilesKernel<0,...         0.00%       0.000us         0.00%       0.000us       0.000us       9.310ms         0.24%       9.310ms       4.900us          1900
+                                            aten::clamp         0.01%     440.966us         0.02%     659.253us      32.963us       2.135ms         0.05%       2.135ms     106.732us            20
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       2.135ms         0.05%       2.135ms     106.732us            20
+         _5x_cudnn_volta_scudnn_128x64_relu_small_nn_v1         0.00%       0.000us         0.00%       0.000us       0.000us       2.071ms         0.05%       2.071ms     103.572us            20
+                       Memcpy HtoD (Pageable -> Device)         0.00%       0.000us         0.00%       0.000us       0.000us       1.333ms         0.03%       1.333ms      66.666us            20
+void cask__5x_cudnn::computeOffsetsKernel<false, fal...         0.00%       0.000us         0.00%       0.000us       0.000us      94.397us         0.00%      94.397us       4.720us            20
+                                Activity Buffer Request         0.07%       2.792ms         0.07%       2.792ms       2.792ms      66.943us         0.00%      66.943us      66.943us             1
+                                        aten::unsqueeze         0.00%     190.471us         0.01%     229.953us      11.498us       0.000us         0.00%       0.000us       0.000us            20
+                                       aten::as_strided         0.00%     137.018us         0.00%     137.018us       3.425us       0.000us         0.00%       0.000us       0.000us            40
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------
+Self CPU time total: 3.866s
+Self CUDA time total: 3.882s

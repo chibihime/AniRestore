@@ -22,8 +22,10 @@ data/download_failures.json
 checkpoints/
 weights/
 
-# Results / profiling artifacts
-results/
+# Results / profiling artifacts -- keep small summary json/txt/md docs
+# (benchmark numbers, profiler tables, findings writeups), exclude large
+# binary trace dumps
+results/*_trace.json
 *.nsys-rep
 *.qdrep
 *.prof

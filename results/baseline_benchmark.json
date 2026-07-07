@@ -1,0 +1,13 @@
+{
+  "device": "cuda",
+  "gpu_name": "Tesla T4",
+  "num_timed_runs": 100,
+  "num_warmup_runs": 10,
+  "input_resize": 256,
+  "batch_size": 1,
+  "mean_ms_per_frame": 185.29538289995799,
+  "median_ms_per_frame": 184.94691849991796,
+  "p95_ms_per_frame": 187.53472100070212,
+  "stdev_ms": 1.3145096303544583,
+  "throughput_fps": 5.396788545669838
+}
