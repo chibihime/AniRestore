@@ -23,16 +23,19 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
      surviving between sessions.
 4. In the first cell, clone the repo and install deps:
 
-   ```bash
-   !git clone https://github.com/chibihime/AniRestore.git
+   Since the repo is **private**, add a GitHub Personal Access Token as a Kaggle
+   **Secret** named `AniRestore_GH_PAT` (Add-ons > Secrets), then pull it in and
+   clone with it:
+
+   ```python
+   from kaggle_secrets import UserSecretsClient
+   user_secrets = UserSecretsClient()
+   gh_pat = user_secrets.get_secret("AniRestore_GH_PAT")
+
+   !git clone https://{gh_pat}@github.com/chibihime/AniRestore.git
    %cd AniRestore
    !pip install -r requirements.txt
    ```
-
-   Since the repo is **private**, cloning over plain `https` will prompt for
-   credentials. Easiest path in a Kaggle notebook: add a GitHub Personal Access
-   Token as a Kaggle **Secret** (Add-ons > Secrets), then clone with
-   `https://<token>@github.com/chibihime/AniRestore.git` instead of the URL above.
 
    Note: do **not** `pip install torch` — Kaggle ships a working torch+CUDA build
    already matched to its driver; reinstalling can break that pairing (see the
