@@ -9,20 +9,11 @@ import argparse
 import logging
 from pathlib import Path
 
-from PIL import Image
-
-from src.data_loader import load_image_tensor
+from src.data_loader import load_image_tensor, tensor_to_pil
 from src.model.restorer import Restorer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
-
-
-def tensor_to_pil(t) -> Image.Image:
-    import numpy as np
-
-    arr = (t.permute(1, 2, 0).numpy() * 255.0).round().clip(0, 255).astype("uint8")
-    return Image.fromarray(arr)
 
 
 def main() -> None:

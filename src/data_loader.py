@@ -13,14 +13,26 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 
+def pil_to_tensor(img: Image.Image) -> torch.Tensor:
+    """Convert a PIL image to a CHW float32 tensor normalized to [0, 1]."""
+    img = img.convert("RGB")
+    arr = torch.from_numpy(np.array(img, copy=True)).permute(2, 0, 1).contiguous()
+    return arr.float() / 255.0
+
+
+def tensor_to_pil(t: torch.Tensor) -> Image.Image:
+    """Inverse of pil_to_tensor: CHW float32 in [0, 1] -> PIL image."""
+    arr = (t.permute(1, 2, 0).numpy() * 255.0).round().clip(0, 255).astype("uint8")
+    return Image.fromarray(arr)
+
+
 def load_image_tensor(path: Path, resize_to: int | None = None) -> torch.Tensor:
     """Load one image as a CHW float32 tensor normalized to [0, 1]."""
     with Image.open(path) as img:
         img = img.convert("RGB")
         if resize_to is not None:
             img = img.resize((resize_to, resize_to), Image.BICUBIC)
-        arr = torch.from_numpy(np.array(img, copy=True)).permute(2, 0, 1).contiguous()
-    return arr.float() / 255.0
+        return pil_to_tensor(img)
 
 
 class CoverArtDataset(Dataset):
