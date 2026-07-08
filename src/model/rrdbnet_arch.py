@@ -15,14 +15,23 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
+from src.kernels.fused_bias_act import fused_bias_leaky_relu
 from src.model.arch_util import default_init_weights, make_layer, pixel_unshuffle
 
 
 class ResidualDenseBlock(nn.Module):
-    """Residual Dense Block, used inside RRDB (as in ESRGAN)."""
+    """Residual Dense Block, used inside RRDB (as in ESRGAN).
 
-    def __init__(self, num_feat=64, num_grow_ch=32):
+    use_triton_kernel=True replaces each conv's separate bias-add +
+    LeakyReLU (the profiled bottleneck, see results/phase3_findings.md) with
+    one fused Triton kernel call. The conv itself (cuDNN Winograd) is
+    unchanged -- convs run with bias=None and the bias is applied by the
+    fused kernel instead of PyTorch's default per-conv bias-add.
+    """
+
+    def __init__(self, num_feat=64, num_grow_ch=32, use_triton_kernel=False):
         super().__init__()
+        self.use_triton_kernel = use_triton_kernel
         self.conv1 = nn.Conv2d(num_feat, num_grow_ch, 3, 1, 1)
         self.conv2 = nn.Conv2d(num_feat + num_grow_ch, num_grow_ch, 3, 1, 1)
         self.conv3 = nn.Conv2d(num_feat + 2 * num_grow_ch, num_grow_ch, 3, 1, 1)
@@ -31,12 +40,19 @@ class ResidualDenseBlock(nn.Module):
         self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
         default_init_weights([self.conv1, self.conv2, self.conv3, self.conv4, self.conv5], 0.1)
 
+    def _conv_act(self, conv: nn.Conv2d, x: torch.Tensor, activate: bool) -> torch.Tensor:
+        if self.use_triton_kernel:
+            raw = F.conv2d(x, conv.weight, bias=None, stride=1, padding=1)
+            return fused_bias_leaky_relu(raw, conv.bias, negative_slope=0.2, activate=activate)
+        y = conv(x)
+        return self.lrelu(y) if activate else y
+
     def forward(self, x):
-        x1 = self.lrelu(self.conv1(x))
-        x2 = self.lrelu(self.conv2(torch.cat((x, x1), 1)))
-        x3 = self.lrelu(self.conv3(torch.cat((x, x1, x2), 1)))
-        x4 = self.lrelu(self.conv4(torch.cat((x, x1, x2, x3), 1)))
-        x5 = self.conv5(torch.cat((x, x1, x2, x3, x4), 1))
+        x1 = self._conv_act(self.conv1, x, activate=True)
+        x2 = self._conv_act(self.conv2, torch.cat((x, x1), 1), activate=True)
+        x3 = self._conv_act(self.conv3, torch.cat((x, x1, x2), 1), activate=True)
+        x4 = self._conv_act(self.conv4, torch.cat((x, x1, x2, x3), 1), activate=True)
+        x5 = self._conv_act(self.conv5, torch.cat((x, x1, x2, x3, x4), 1), activate=False)
         # empirically scaled residual, per the original ESRGAN paper
         return x5 * 0.2 + x
 
@@ -44,11 +60,11 @@ class ResidualDenseBlock(nn.Module):
 class RRDB(nn.Module):
     """Residual in Residual Dense Block."""
 
-    def __init__(self, num_feat, num_grow_ch=32):
+    def __init__(self, num_feat, num_grow_ch=32, use_triton_kernel=False):
         super().__init__()
-        self.rdb1 = ResidualDenseBlock(num_feat, num_grow_ch)
-        self.rdb2 = ResidualDenseBlock(num_feat, num_grow_ch)
-        self.rdb3 = ResidualDenseBlock(num_feat, num_grow_ch)
+        self.rdb1 = ResidualDenseBlock(num_feat, num_grow_ch, use_triton_kernel)
+        self.rdb2 = ResidualDenseBlock(num_feat, num_grow_ch, use_triton_kernel)
+        self.rdb3 = ResidualDenseBlock(num_feat, num_grow_ch, use_triton_kernel)
 
     def forward(self, x):
         out = self.rdb1(x)
@@ -65,7 +81,16 @@ class RRDBNet(nn.Module):
     trade spatial resolution for channels before the main trunk.
     """
 
-    def __init__(self, num_in_ch=3, num_out_ch=3, scale=4, num_feat=64, num_block=23, num_grow_ch=32):
+    def __init__(
+        self,
+        num_in_ch=3,
+        num_out_ch=3,
+        scale=4,
+        num_feat=64,
+        num_block=23,
+        num_grow_ch=32,
+        use_triton_kernel=False,
+    ):
         super().__init__()
         self.scale = scale
         if scale == 2:
@@ -73,7 +98,9 @@ class RRDBNet(nn.Module):
         elif scale == 1:
             num_in_ch = num_in_ch * 16
         self.conv_first = nn.Conv2d(num_in_ch, num_feat, 3, 1, 1)
-        self.body = make_layer(RRDB, num_block, num_feat=num_feat, num_grow_ch=num_grow_ch)
+        self.body = make_layer(
+            RRDB, num_block, num_feat=num_feat, num_grow_ch=num_grow_ch, use_triton_kernel=use_triton_kernel
+        )
         self.conv_body = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
         self.conv_up1 = nn.Conv2d(num_feat, num_feat, 3, 1, 1)
         self.conv_up2 = nn.Conv2d(num_feat, num_feat, 3, 1, 1)

@@ -16,9 +16,22 @@ DEFAULT_CHECKPOINT = Path(__file__).resolve().parents[2] / "checkpoints" / "Real
 
 
 class Restorer:
-    def __init__(self, checkpoint_path: Path | str = DEFAULT_CHECKPOINT, device: str | None = None) -> None:
+    def __init__(
+        self,
+        checkpoint_path: Path | str = DEFAULT_CHECKPOINT,
+        device: str | None = None,
+        use_triton_kernel: bool = False,
+    ) -> None:
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
-        self.model = RRDBNet(num_in_ch=3, num_out_ch=3, scale=4, num_feat=64, num_block=6, num_grow_ch=32)
+        self.model = RRDBNet(
+            num_in_ch=3,
+            num_out_ch=3,
+            scale=4,
+            num_feat=64,
+            num_block=6,
+            num_grow_ch=32,
+            use_triton_kernel=use_triton_kernel,
+        )
 
         ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
         state_dict = ckpt.get("params_ema") or ckpt.get("params") or ckpt
