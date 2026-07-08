@@ -1,0 +1,37 @@
+MIT License
+
+Copyright (c) 2026 chibihime
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+This license covers this project's own code. It does NOT cover:
+
+- src/model/rrdbnet_arch.py and arch_util.py, vendored from the Real-ESRGAN
+  project (https://github.com/xinntao/Real-ESRGAN) and retaining that
+  project's BSD-3-Clause license -- see the header comment in those files.
+- The pretrained checkpoint (checkpoints/RealESRGAN_x4plus_anime_6B.pth),
+  downloaded from the Real-ESRGAN project's releases and subject to its
+  license terms, not redistributed in this repo.
+- Anime cover-art images (examples/, data/raw_covers/ if present locally),
+  which are copyrighted promotional material owned by their respective
+  rights holders (studios/publishers), sourced via the MyAnimeList API for
+  personal, non-commercial research/demonstration use only. These are not
+  licensed for reuse under the MIT terms above.

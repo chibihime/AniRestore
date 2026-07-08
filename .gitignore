@@ -30,6 +30,10 @@ results/*_trace.json
 *.qdrep
 *.prof
 
+# Personal Kaggle scratch notebook -- docs/environment_setup.md is the
+# canonical, up-to-date setup reference; this drifts out of sync with it.
+anirestore.ipynb
+
 # OS / editor
 .DS_Store
 .vscode/
