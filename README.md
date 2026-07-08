@@ -7,7 +7,7 @@ plus the measurement work needed to know whether that kernel actually earns
 its keep end-to-end, not just at the op level.
 
 Built on cover art re-derived from the same MyAnimeList dataset used by
-[AniOntology](../AniOntology) (same anime IDs across both projects — see
+[AniOntology](https://github.com/chibihime/AniOntology) (same anime IDs across both projects — see
 [Relationship to AniOntology](#relationship-to-aniontology)).
 
 ## Try it
@@ -123,7 +123,7 @@ python -m src.benchmark_compare --n 100 --warmup 10 --resize 256
 
 The cover-art dataset here isn't re-fetched from scratch — `src/fetch_cover_manifest.py`
 reads the anime IDs and cover URLs straight out of
-[AniOntology](../AniOntology)'s already-ingested MAL dataset
+[AniOntology](https://github.com/chibihime/AniOntology)'s already-ingested MAL dataset
 (`data/raw/myanimelist_anime.json`), so both projects stay pointed at the
 exact same set of anime. `src/mal/` is a standalone MAL API v2 client (no
 import dependency on AniOntology) used only to backfill any entries missing a
