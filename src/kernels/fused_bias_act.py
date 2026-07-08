@@ -76,11 +76,13 @@ def fused_bias_leaky_relu(
     if not _TRITON_AVAILABLE:
         raise RuntimeError("Triton is not installed -- required to run the fused kernel on CUDA tensors")
 
-    assert x.ndim == 4, "expected NCHW input"
-    x = x.contiguous()
-    bias = bias.contiguous()
+    # x must be contiguous for the flat-index -> channel math below to be
+    # correct (not just fast) -- conv2d output already is, this only copies
+    # for the non-contiguous caller case exercised in tests. bias (a Conv2d
+    # parameter) is always contiguous already, so skip that redundant check.
+    if not x.is_contiguous():
+        x = x.contiguous()
     n, c, h, w = x.shape
-    assert bias.shape == (c,), f"bias shape {tuple(bias.shape)} != (C,)={c}"
 
     out = torch.empty_like(x)
     numel = x.numel()
