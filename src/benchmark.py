@@ -10,6 +10,7 @@ overhead, not actual GPU compute time.
 Usage:
     python -m src.benchmark --input data/raw_covers --n 100 --warmup 10 \
         --resize 256 --out results/baseline_benchmark.json
+    python -m src.benchmark --triton --out results/triton_benchmark.json
 """
 
 import argparse
@@ -40,6 +41,7 @@ def main() -> None:
     parser.add_argument("--warmup", type=int, default=10, help="untimed warmup runs")
     parser.add_argument("--resize", type=int, default=256, help="resize images to this square size")
     parser.add_argument("--out", default="results/baseline_benchmark.json")
+    parser.add_argument("--triton", action="store_true", help="use the fused Triton kernel instead of stock ops")
     args = parser.parse_args()
 
     paths = sorted(
@@ -48,9 +50,9 @@ def main() -> None:
     if len(paths) < args.n + args.warmup:
         raise ValueError(f"need at least {args.n + args.warmup} images, found {len(paths)}")
 
-    restorer = Restorer()
+    restorer = Restorer(use_triton_kernel=args.triton)
     device = restorer.device
-    logger.info("device: %s", device)
+    logger.info("device: %s, use_triton_kernel: %s", device, args.triton)
 
     images = [load_image_tensor(p, resize_to=args.resize) for p in paths[: args.n + args.warmup]]
 
@@ -79,6 +81,7 @@ def main() -> None:
     results = {
         "device": str(device),
         "gpu_name": torch.cuda.get_device_name(0) if device.type == "cuda" else None,
+        "use_triton_kernel": args.triton,
         "num_timed_runs": len(latencies_ms),
         "num_warmup_runs": len(warmup_imgs),
         "input_resize": args.resize,

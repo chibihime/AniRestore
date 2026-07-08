@@ -10,6 +10,7 @@ run under `nsys` separately (Linux + NVIDIA only, e.g. on Kaggle):
 Usage:
     python -m src.profile_baseline --input data/raw_covers --n 20 --resize 256 \
         --out-dir results
+    python -m src.profile_baseline --triton --out-dir results
 """
 
 import argparse
@@ -34,15 +35,16 @@ def main() -> None:
     parser.add_argument("--resize", type=int, default=256)
     parser.add_argument("--out-dir", default="results")
     parser.add_argument("--row-limit", type=int, default=25)
+    parser.add_argument("--triton", action="store_true", help="use the fused Triton kernel instead of stock ops")
     args = parser.parse_args()
 
     paths = sorted(
         p for p in Path(args.input).iterdir() if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")
     )[: args.n + args.warmup]
 
-    restorer = Restorer()
+    restorer = Restorer(use_triton_kernel=args.triton)
     device = restorer.device
-    logger.info("device: %s", device)
+    logger.info("device: %s, use_triton_kernel: %s", device, args.triton)
 
     images = [load_image_tensor(p, resize_to=args.resize) for p in paths]
     warmup_imgs, profiled_imgs = images[: args.warmup], images[args.warmup :]
@@ -68,10 +70,11 @@ def main() -> None:
     table = prof.key_averages().table(sort_by=sort_key, row_limit=args.row_limit)
     print(table)
 
-    table_path = out_dir / "baseline_profile_table.txt"
+    prefix = "triton" if args.triton else "baseline"
+    table_path = out_dir / f"{prefix}_profile_table.txt"
     table_path.write_text(table, encoding="utf-8")
 
-    trace_path = out_dir / "baseline_trace.json"
+    trace_path = out_dir / f"{prefix}_trace.json"
     prof.export_chrome_trace(str(trace_path))
 
     logger.info("wrote op table to %s and chrome trace to %s", table_path, trace_path)
