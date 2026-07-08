@@ -24,6 +24,12 @@ class Restorer:
         use_cuda_graph: bool = False,
     ) -> None:
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        if self.device.type == "cuda":
+            # Fixed input shape per benchmark/demo call site -- let cuDNN
+            # autotune and pick the fastest conv algorithm for that shape
+            # instead of its default heuristic choice. One-time re-tuning
+            # cost per distinct shape, amortized over repeated calls.
+            torch.backends.cudnn.benchmark = True
         self.model = RRDBNet(
             num_in_ch=3,
             num_out_ch=3,
