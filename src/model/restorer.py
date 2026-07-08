@@ -21,6 +21,7 @@ class Restorer:
         checkpoint_path: Path | str = DEFAULT_CHECKPOINT,
         device: str | None = None,
         use_triton_kernel: bool = False,
+        use_cuda_graph: bool = False,
     ) -> None:
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.model = RRDBNet(
@@ -38,6 +39,14 @@ class Restorer:
         self.model.load_state_dict(state_dict, strict=True)
         self.model.eval().to(self.device)
 
+        self.use_cuda_graph = use_cuda_graph
+        if use_cuda_graph and self.device.type != "cuda":
+            raise ValueError("use_cuda_graph requires a CUDA device")
+        self._graph = None
+        self._graph_shape = None
+        self._static_input = None
+        self._static_output = None
+
     @torch.no_grad()
     def restore(self, image: torch.Tensor) -> torch.Tensor:
         """image: CHW float32 tensor in [0, 1]. Returns CHW float32 in [0, 1], 4x upscaled."""
@@ -47,5 +56,51 @@ class Restorer:
     def restore_batch(self, batch: torch.Tensor) -> torch.Tensor:
         """batch: NCHW float32 tensor in [0, 1]. Returns NCHW float32 in [0, 1], 4x upscaled."""
         batch = batch.to(self.device)
-        out = self.model(batch)
-        return out.clamp(0, 1).cpu()
+        if self.use_cuda_graph:
+            out = self._replay(batch)
+        else:
+            out = self.model(batch).clamp(0, 1)
+        return out.cpu()
+
+    def _replay(self, batch: torch.Tensor) -> torch.Tensor:
+        shape = tuple(batch.shape)
+        if self._graph is None or self._graph_shape != shape:
+            self._capture(shape)
+        self._static_input.copy_(batch)
+        self._graph.replay()
+        return self._static_output.clone()
+
+    def _capture(self, shape: tuple) -> None:
+        """Capture the forward pass as a CUDA graph for a fixed input shape.
+
+        CUDA graphs eliminate per-op Python/driver launch overhead by
+        recording the exact kernel sequence once and replaying it -- see
+        results/phase4_findings.md for why this matters: fusing bias+
+        LeakyReLU cut GPU compute time for that op by 53%, but at batch=1
+        that saving was fully absorbed by per-launch dispatch overhead
+        (~1800 small kernel launches/frame). Graph replay avoids
+        re-dispatching each of those launches from Python every call.
+
+        Must warm up on a *side stream* before capture (PyTorch's documented
+        pattern) so cuDNN algorithm selection and Triton's first-call JIT
+        compilation both happen outside the captured region -- capturing a
+        JIT compile or algorithm search would bake in the wrong thing.
+        """
+        static_input = torch.zeros(shape, device=self.device)
+
+        warmup_stream = torch.cuda.Stream()
+        warmup_stream.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(warmup_stream):
+            for _ in range(3):
+                self.model(static_input).clamp(0, 1)
+        torch.cuda.current_stream().wait_stream(warmup_stream)
+        torch.cuda.synchronize()
+
+        graph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph):
+            static_output = self.model(static_input).clamp(0, 1)
+
+        self._graph = graph
+        self._graph_shape = shape
+        self._static_input = static_input
+        self._static_output = static_output

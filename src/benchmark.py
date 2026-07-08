@@ -11,6 +11,12 @@ Usage:
     python -m src.benchmark --input data/raw_covers --n 100 --warmup 10 \
         --resize 256 --out results/baseline_benchmark.json
     python -m src.benchmark --triton --out results/triton_benchmark.json
+    python -m src.benchmark --triton --cuda-graph --out results/triton_graph_benchmark.json
+
+--resize is fixed across the whole run, so all images share one shape --
+required for --cuda-graph anyway (graphs are captured per input shape; a
+constant shape means capture happens once, during warmup, and every timed
+pass is a pure replay).
 """
 
 import argparse
@@ -42,6 +48,9 @@ def main() -> None:
     parser.add_argument("--resize", type=int, default=256, help="resize images to this square size")
     parser.add_argument("--out", default="results/baseline_benchmark.json")
     parser.add_argument("--triton", action="store_true", help="use the fused Triton kernel instead of stock ops")
+    parser.add_argument(
+        "--cuda-graph", action="store_true", help="capture+replay the forward pass as a CUDA graph"
+    )
     args = parser.parse_args()
 
     paths = sorted(
@@ -50,9 +59,11 @@ def main() -> None:
     if len(paths) < args.n + args.warmup:
         raise ValueError(f"need at least {args.n + args.warmup} images, found {len(paths)}")
 
-    restorer = Restorer(use_triton_kernel=args.triton)
+    restorer = Restorer(use_triton_kernel=args.triton, use_cuda_graph=args.cuda_graph)
     device = restorer.device
-    logger.info("device: %s, use_triton_kernel: %s", device, args.triton)
+    logger.info(
+        "device: %s, use_triton_kernel: %s, use_cuda_graph: %s", device, args.triton, args.cuda_graph
+    )
 
     images = [load_image_tensor(p, resize_to=args.resize) for p in paths[: args.n + args.warmup]]
 
@@ -82,6 +93,7 @@ def main() -> None:
         "device": str(device),
         "gpu_name": torch.cuda.get_device_name(0) if device.type == "cuda" else None,
         "use_triton_kernel": args.triton,
+        "use_cuda_graph": args.cuda_graph,
         "num_timed_runs": len(latencies_ms),
         "num_warmup_runs": len(warmup_imgs),
         "input_resize": args.resize,
