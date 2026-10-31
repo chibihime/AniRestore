@@ -18,7 +18,9 @@ python app.py
 
 Opens a Gradio UI: upload an anime image (or pick one of the samples in
 `examples/`), click **Restore**, see the original and the 4x-restored output
-side by side with inference time and device shown.
+side by side with inference time and device shown. The demo launches with
+`share=True`, so Gradio also prints a public `*.gradio.live` link (valid for
+72 hours) that anyone can open while the process is running.
 
 ## Problem statement
 

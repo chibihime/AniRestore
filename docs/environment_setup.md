@@ -29,21 +29,13 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
      surviving between sessions.
 4. In the first cell, clone the repo and install deps:
 
-   Since the repo is **private**, add a GitHub Personal Access Token as a Kaggle
-   **Secret** named `AniRestore_GH_PAT` (Add-ons > Secrets), then pull it in and
-   clone with it:
-
    ```python
    import os
    import shutil
-   from kaggle_secrets import UserSecretsClient
-
-   user_secrets = UserSecretsClient()
-   gh_pat = user_secrets.get_secret("AniRestore_GH_PAT")
 
    os.chdir("/kaggle/working")
    shutil.rmtree("/kaggle/working/AniRestore", ignore_errors=True)
-   !git clone https://{gh_pat}@github.com/chibihime/AniRestore.git
+   !git clone https://github.com/chibihime/AniRestore.git
    os.chdir("/kaggle/working/AniRestore")
    !pip install -r requirements.txt
    print(os.getcwd())
@@ -84,8 +76,13 @@ file-based repo workflow rather than being locked into ephemeral notebook cells.
 
 ## Attaching the cover-art dataset
 
-The private `pruthaannadate/anirestore-raw-covers` Kaggle dataset (built from
-`data/raw_covers/`, see `data/README.md`) mounts at a path with an extra
+The cover art itself isn't redistributed with this repo (it's copyrighted), so
+the `pruthaannadate/anirestore-raw-covers` Kaggle dataset is private. To
+reproduce, build `data/raw_covers/` yourself with the scripts described in
+`data/README.md`, then upload it as your own private Kaggle dataset and
+substitute your username/slug in the paths below.
+
+A Kaggle dataset mounts at a path with an extra
 `datasets/<owner>/` segment on this account's Kaggle environment, **not** the
 flat `/kaggle/input/<slug>/` path older Kaggle docs describe:
 

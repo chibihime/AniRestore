@@ -42,3 +42,6 @@ anirestore.ipynb
 # Env files that may hold secrets (e.g. MAL API keys)
 .env
 *.env.local
+
+# Gradio local cache (share-link certificate, etc.)
+.gradio/

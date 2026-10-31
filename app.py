@@ -24,6 +24,7 @@ from src.model.restorer import Restorer
 
 MAX_INPUT_SIDE = 512  # cap input resolution so the 4x output stays a reasonable size
 EXAMPLES_DIR = Path(__file__).resolve().parent / "examples"
+FINDINGS_PATH = Path(__file__).resolve().parent / "results" / "phase4_findings.md"
 
 restorer = Restorer(use_triton_kernel=True, use_cuda_graph=False)
 
@@ -64,10 +65,12 @@ with gr.Blocks(title="AniRestore") as demo:
     gr.Markdown(
         "# AniRestore\n"
         "4x anime cover-art restoration with Real-ESRGAN, accelerated by a custom "
-        "fused Triton kernel (see [phase4_findings.md](results/phase4_findings.md) "
-        "for the benchmark). Upload your own image or pick a sample below, then "
+        "fused Triton kernel. Upload your own image or pick a sample below, then "
         "click Restore."
     )
+    if FINDINGS_PATH.exists():
+        with gr.Accordion("Benchmark findings (phase4_findings.md)", open=False):
+            gr.Markdown(FINDINGS_PATH.read_text())
     with gr.Row():
         input_image = gr.Image(type="pil", label="Original")
         output_image = gr.Image(type="pil", label="Restored (4x)")
@@ -85,4 +88,4 @@ with gr.Blocks(title="AniRestore") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)
