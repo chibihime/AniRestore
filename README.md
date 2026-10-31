@@ -1,3 +1,16 @@
+---
+title: AniRestore
+emoji: 🎨
+colorFrom: pink
+colorTo: indigo
+sdk: gradio
+sdk_version: 6.20.0
+app_file: app.py
+pinned: false
+license: mit
+short_description: 4x anime cover-art restoration with Real-ESRGAN
+---
+
 # AniRestore
 
 CUDA/Triton-accelerated anime cover-art restoration: a pretrained Real-ESRGAN
@@ -11,6 +24,13 @@ Built on cover art re-derived from the same MyAnimeList dataset used by
 [Relationship to AniOntology](#relationship-to-aniontology)).
 
 ## Try it
+
+**Live demo:** [huggingface.co/spaces/prutha-14/AniRestore](https://huggingface.co/spaces/prutha-14/AniRestore)
+(free CPU tier, so it runs the PyTorch fallback path rather than the fused
+Triton kernel; benchmark numbers below are from a T4 GPU). Pushes to `master`
+redeploy it via `.github/workflows/deploy-hf-space.yml`.
+
+To run it yourself:
 
 ```bash
 python app.py

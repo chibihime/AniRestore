@@ -13,6 +13,17 @@ import torch
 from src.model.rrdbnet_arch import RRDBNet
 
 DEFAULT_CHECKPOINT = Path(__file__).resolve().parents[2] / "checkpoints" / "RealESRGAN_x4plus_anime_6B.pth"
+# Official Real-ESRGAN release asset. Checkpoints are gitignored, so fresh
+# environments (Kaggle, Hugging Face Spaces) fetch it on first use.
+CHECKPOINT_URL = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
+CHECKPOINT_SHA256 = "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da"
+
+
+def _ensure_checkpoint(path: Path) -> None:
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.hub.download_url_to_file(CHECKPOINT_URL, str(path), hash_prefix=CHECKPOINT_SHA256)
 
 
 class Restorer:
@@ -40,6 +51,8 @@ class Restorer:
             use_triton_kernel=use_triton_kernel,
         )
 
+        if Path(checkpoint_path) == DEFAULT_CHECKPOINT:
+            _ensure_checkpoint(DEFAULT_CHECKPOINT)
         ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
         state_dict = ckpt.get("params_ema") or ckpt.get("params") or ckpt
         self.model.load_state_dict(state_dict, strict=True)

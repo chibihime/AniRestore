@@ -1,0 +1,36 @@
+# Deploys the Gradio demo (app.py) to a Hugging Face Space on every push to
+# master. Uses `hf upload` rather than `git push` because the Hub rejects
+# plain-git pushes containing binary files (the examples/ images).
+#
+# One-time setup in this GitHub repo's Settings > Secrets and variables > Actions:
+#   - Secret   HF_TOKEN     : a Hugging Face access token with write permission
+#   - Variable HF_SPACE_ID  : the target Space, e.g. <hf-username>/AniRestore
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Hugging Face CLI
+        run: pip install "huggingface_hub==1.22.0"
+
+      - name: Create Space if missing, then upload
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
+        run: |
+          hf repos create "$HF_SPACE_ID" --repo-type space --space-sdk gradio --exist-ok
+          hf upload "$HF_SPACE_ID" . . --repo-type space \
+            --exclude ".git/*" ".github/*" "tests/*" "notebooks/*" \
+            --commit-message "Deploy ${GITHUB_SHA::7} from GitHub"

@@ -12,6 +12,7 @@ PyTorch ops (src/kernels/fused_bias_act.py), so the demo still runs correctly,
 just without the speedup.
 """
 
+import os
 import time
 from pathlib import Path
 
@@ -54,8 +55,9 @@ def restore(image: Image.Image):
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     out_pil = tensor_to_pil(out)
+    path = "fused Triton kernel" if restorer.device.type == "cuda" else "PyTorch CPU fallback"
     caption = (
-        f"**{elapsed_ms:.0f} ms** on `{restorer.device}` (fused Triton kernel) "
+        f"**{elapsed_ms:.0f} ms** on `{restorer.device}` ({path}) "
         f"— {image.width}x{image.height} → {out_pil.width}x{out_pil.height}"
     )
     return out_pil, caption
@@ -88,4 +90,6 @@ with gr.Blocks(title="AniRestore") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    # Hugging Face Spaces (SPACE_ID set) already serves the app publicly;
+    # elsewhere, share=True prints a temporary public gradio.live link.
+    demo.launch(share="SPACE_ID" not in os.environ)
