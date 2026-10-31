@@ -12,7 +12,6 @@ PyTorch ops (src/kernels/fused_bias_act.py), so the demo still runs correctly,
 just without the speedup.
 """
 
-import os
 import time
 from pathlib import Path
 
@@ -90,6 +89,4 @@ with gr.Blocks(title="AniRestore") as demo:
 
 
 if __name__ == "__main__":
-    # Hugging Face Spaces (SPACE_ID set) already serves the app publicly;
-    # elsewhere, share=True prints a temporary public gradio.live link.
-    demo.launch(share="SPACE_ID" not in os.environ)
+    demo.launch(share=True)

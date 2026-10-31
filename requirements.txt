@@ -3,10 +3,7 @@
 # reinstalling can break the preconfigured CUDA/driver pairing.
 # On any other machine (local Linux+NVIDIA, Lambda, etc.) install torch
 # per https://pytorch.org/get-started/locally/ for your CUDA version first.
-# The unpinned `torch` below is a no-op wherever torch is already installed;
-# it's here for Hugging Face Spaces, which doesn't preinstall it.
 
-torch
 triton>=2.3.0
 torchvision
 numpy

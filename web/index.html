@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AniRestore</title>
+<meta name="description" content="4x anime cover-art restoration with Real-ESRGAN, running entirely in your browser.">
+<style>
+  :root {
+    --bg: #faf8fb;
+    --surface: #ffffff;
+    --text: #1d1a22;
+    --muted: #6b6475;
+    --border: #e4dfe9;
+    --accent: #c2417a;
+    --accent-text: #ffffff;
+    --track: #ece7f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141218;
+      --surface: #1d1a23;
+      --text: #ece8f1;
+      --muted: #a39cad;
+      --border: #332e3b;
+      --accent: #f07aaa;
+      --accent-text: #1a0d14;
+      --track: #2a2631;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141218;
+    --surface: #1d1a23;
+    --text: #ece8f1;
+    --muted: #a39cad;
+    --border: #332e3b;
+    --accent: #f07aaa;
+    --accent-text: #1a0d14;
+    --track: #2a2631;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .lede { color: var(--muted); margin: 0 0 28px; max-width: 62ch; }
+  a { color: var(--accent); }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .drop {
+    display: block;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .drop.over, .drop:hover { border-color: var(--accent); color: var(--text); }
+  .drop input { display: none; }
+  .label { font-size: 0.85rem; color: var(--muted); margin: 18px 0 8px; }
+  .examples { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .examples button {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+  }
+  .examples button:hover, .examples button:focus-visible { border-color: var(--accent); outline: none; }
+  .examples img { display: block; width: 72px; height: 100px; object-fit: cover; border-radius: 6px; }
+  .status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 28px; }
+  .status p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .status strong { color: var(--text); }
+  progress { flex: 1 1 160px; height: 8px; appearance: none; border: 0; border-radius: 4px; background: var(--track); }
+  progress::-webkit-progress-bar { background: var(--track); border-radius: 4px; }
+  progress::-webkit-progress-value { background: var(--accent); border-radius: 4px; }
+  progress::-moz-progress-bar { background: var(--accent); border-radius: 4px; }
+  .compare {
+    position: relative;
+    margin-top: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--track);
+    user-select: none;
+    touch-action: pan-y;
+  }
+  .compare canvas { display: block; width: 100%; height: auto; }
+  .compare .after { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .divider {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25);
+    pointer-events: none;
+  }
+  .tag {
+    position: absolute; top: 10px; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.75rem; background: rgba(0,0,0,.6); color: #fff;
+  }
+  .tag.left { left: 10px; }
+  .tag.right { right: 10px; }
+  .slider { width: 100%; margin: 12px 0 0; accent-color: var(--accent); }
+  .actions { display: flex; gap: 10px; margin-top: 12px; }
+  .btn {
+    border: 0; border-radius: 8px; padding: 9px 16px; font: inherit; cursor: pointer;
+    background: var(--accent); color: var(--accent-text); text-decoration: none;
+  }
+  [hidden] { display: none !important; }
+  .notes { color: var(--muted); font-size: 0.9rem; }
+  .notes ul { padding-left: 20px; margin: 8px 0 0; }
+  .notes li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AniRestore</h1>
+  <p class="lede">
+    4x anime cover-art restoration with Real-ESRGAN (anime 6B). The model runs
+    entirely in your browser, so images never leave your device.
+    <a href="https://github.com/chibihime/AniRestore">Source &amp; benchmarks on GitHub</a>.
+  </p>
+
+  <section class="panel">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="image/*">
+      <strong>Drop an image here</strong> or click to choose one
+    </label>
+    <div id="examples-wrap" hidden>
+      <p class="label">Or try a sample</p>
+      <div class="examples" id="examples"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="result" hidden>
+    <div class="status">
+      <p id="status">Loading model…</p>
+      <progress id="progress" max="1" value="0" hidden></progress>
+    </div>
+    <div class="compare" id="compare">
+      <canvas id="before"></canvas>
+      <canvas id="after" class="after"></canvas>
+      <div class="divider" id="divider"></div>
+      <span class="tag left">Original</span>
+      <span class="tag right">Restored 4x</span>
+    </div>
+    <input class="slider" id="slider" type="range" min="0" max="100" value="50" aria-label="Compare original and restored">
+    <div class="actions">
+      <a class="btn" id="download" download="anirestore.png" hidden>Download restored PNG</a>
+    </div>
+  </section>
+
+  <section class="notes">
+    <strong>About this demo</strong>
+    <ul>
+      <li>
+        Runs the exported ONNX model with ONNX Runtime Web, on WebGPU when your
+        browser supports it, otherwise on CPU via WebAssembly. Large inputs are
+        downscaled first (longest side 512px on WebGPU, 256px on CPU, where a
+        restore takes around 30 seconds).
+      </li>
+      <li>
+        The project's custom fused Triton kernel is a CUDA kernel and can't run
+        in a browser; its benchmark results (Tesla T4) are in the
+        <a href="https://github.com/chibihime/AniRestore#readme">README</a>.
+      </li>
+      <li>
+        Model: <a href="https://github.com/xinntao/Real-ESRGAN">Real-ESRGAN</a>
+        by Xintao Wang et al., <a href="REAL-ESRGAN-LICENSE.txt">BSD-3-Clause</a>. Sample images are copyrighted cover
+        art, shown for non-commercial demonstration only.
+      </li>
+    </ul>
+  </section>
+</main>
+
+<script type="module">
+  import * as ort from "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.webgpu.min.mjs";
+  import { upscale } from "./upscale.js";
+
+  ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
+
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $("status"), progressEl = $("progress");
+  const before = $("before"), after = $("after");
+  let sessionPromise = null, backend = null, busy = false;
+
+  function setStatus(html) { statusEl.innerHTML = html; }
+
+  async function getSession() {
+    if (!sessionPromise) {
+      sessionPromise = (async () => {
+        const model = await (await fetch("model.onnx")).arrayBuffer();
+        if (navigator.gpu) {
+          try {
+            backend = "webgpu";
+            return await ort.InferenceSession.create(model, { executionProviders: ["webgpu"] });
+          } catch (err) {
+            console.warn("WebGPU unavailable, falling back to WebAssembly", err);
+          }
+        }
+        backend = "wasm";
+        return await ort.InferenceSession.create(model, { executionProviders: ["wasm"] });
+      })();
+      sessionPromise.catch(() => { sessionPromise = null; });
+    }
+    return sessionPromise;
+  }
+
+  function capSize(w, h, maxSide) {
+    const s = Math.min(1, maxSide / Math.max(w, h));
+    return [Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s))];
+  }
+
+  async function restore(source) {
+    if (busy) return;
+    busy = true;
+    $("result").hidden = false;
+    $("download").hidden = true;
+    after.width = after.height = 0;
+    progressEl.hidden = true;
+    try {
+      setStatus("Loading model (18 MB, cached after the first visit)…");
+      const session = await getSession();
+      const bitmap = await createImageBitmap(source);
+      const [w, h] = capSize(bitmap.width, bitmap.height, backend === "webgpu" ? 512 : 256);
+
+      before.width = w; before.height = h;
+      const bctx = before.getContext("2d");
+      bctx.imageSmoothingQuality = "high";
+      bctx.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      const rgba = bctx.getImageData(0, 0, w, h).data;
+
+      const label = backend === "webgpu" ? "WebGPU" : "CPU (WebAssembly)";
+      setStatus(`Restoring on <strong>${label}</strong>…`);
+      progressEl.hidden = false;
+      progressEl.value = 0;
+      // Yield so the status paints before the first tile blocks the thread.
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r)));
+
+      const t0 = performance.now();
+      const out = await upscale(session, ort, rgba, w, h, {
+        onProgress: (f) => { progressEl.value = f; },
+      });
+      const secs = ((performance.now() - t0) / 1000).toFixed(1);
+
+      after.width = out.width; after.height = out.height;
+      after.getContext("2d").putImageData(new ImageData(out.data, out.width, out.height), 0, 0);
+      updateSlider();
+      progressEl.hidden = true;
+      setStatus(`<strong>${secs}s</strong> on ${label} · ${w}×${h} → ${out.width}×${out.height}`);
+
+      after.toBlob((blob) => {
+        const link = $("download");
+        if (link.href) URL.revokeObjectURL(link.href);
+        link.href = URL.createObjectURL(blob);
+        link.hidden = false;
+      }, "image/png");
+    } catch (err) {
+      console.error(err);
+      progressEl.hidden = true;
+      setStatus(`Something went wrong: ${err.message || err}`);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function updateSlider() {
+    const pct = $("slider").value;
+    after.style.clipPath = `inset(0 0 0 ${pct}%)`;
+    $("divider").style.left = `calc(${pct}% - 1px)`;
+  }
+  $("slider").addEventListener("input", updateSlider);
+  updateSlider();
+
+  // Drag directly on the image to move the divider.
+  const compare = $("compare");
+  function dragTo(e) {
+    const rect = compare.getBoundingClientRect();
+    $("slider").value = Math.round(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) * 100);
+    updateSlider();
+  }
+  compare.addEventListener("pointerdown", (e) => { compare.setPointerCapture(e.pointerId); dragTo(e); });
+  compare.addEventListener("pointermove", (e) => { if (compare.hasPointerCapture(e.pointerId)) dragTo(e); });
+
+  $("file").addEventListener("change", (e) => { if (e.target.files[0]) restore(e.target.files[0]); });
+  const drop = $("drop");
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith("image/")) restore(f);
+  });
+
+  // examples.json is generated at deploy time from the repo's examples/ folder.
+  fetch("examples.json").then((r) => (r.ok ? r.json() : [])).then((names) => {
+    if (!names.length) return;
+    const wrap = $("examples");
+    for (const name of names) {
+      const btn = document.createElement("button");
+      const img = document.createElement("img");
+      img.src = `examples/${name}`;
+      img.alt = name.replace(/\.[^.]+$/, "").replace(/_/g, " ");
+      img.loading = "lazy";
+      btn.title = img.alt;
+      btn.append(img);
+      btn.addEventListener("click", async () => restore(await (await fetch(img.src)).blob()));
+      wrap.append(btn);
+    }
+    $("examples-wrap").hidden = false;
+  }).catch(() => {});
+</script>
+</body>
+</html>

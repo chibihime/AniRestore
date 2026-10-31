@@ -1,16 +1,3 @@
----
-title: AniRestore
-emoji: 🎨
-colorFrom: pink
-colorTo: indigo
-sdk: gradio
-sdk_version: 6.20.0
-app_file: app.py
-pinned: false
-license: mit
-short_description: 4x anime cover-art restoration with Real-ESRGAN
----
-
 # AniRestore
 
 CUDA/Triton-accelerated anime cover-art restoration: a pretrained Real-ESRGAN
@@ -25,10 +12,13 @@ Built on cover art re-derived from the same MyAnimeList dataset used by
 
 ## Try it
 
-**Live demo:** [huggingface.co/spaces/prutha-14/AniRestore](https://huggingface.co/spaces/prutha-14/AniRestore)
-(free CPU tier, so it runs the PyTorch fallback path rather than the fused
-Triton kernel; benchmark numbers below are from a T4 GPU). Pushes to `master`
-redeploy it via `.github/workflows/deploy-hf-space.yml`.
+**Live demo:** [chibihime.github.io/AniRestore](https://chibihime.github.io/AniRestore/).
+The model runs entirely in your browser via ONNX Runtime Web (WebGPU when
+available, otherwise WebAssembly), so it's a static GitHub Pages site with no
+server. The fused Triton kernel is CUDA-only and doesn't run there; benchmark
+numbers below are from a T4 GPU. Pushes to `master` rebuild it via
+`.github/workflows/deploy-pages.yml`, which exports the ONNX model with
+`src/export_onnx.py` (including a PyTorch-vs-onnxruntime parity check).
 
 To run it yourself:
 
@@ -123,11 +113,13 @@ src/
   fetch_cover_manifest.py, download_covers.py   cover-art data pipeline
   data_loader.py       image <-> tensor helpers
   benchmark.py, benchmark_compare.py, profile_baseline.py   measurement scripts
+  export_onnx.py       ONNX export + parity check for the browser demo
 tests/                 kernel + model + CUDA-graph correctness gates
 results/               benchmark numbers, profiler tables, findings writeups
 examples/              curated sample cover art for the demo
 docs/environment_setup.md   Kaggle Notebook setup (this project's GPU environment)
-app.py                 the Gradio demo
+app.py                 the Gradio demo (local / Kaggle, runs the Triton kernel on GPU)
+web/                   the in-browser demo deployed to GitHub Pages
 ```
 
 ## Running the benchmarks yourself
@@ -155,8 +147,8 @@ cached cover URL.
 
 This project's own code is MIT-licensed (see [LICENSE](LICENSE)). That does
 **not** cover: the vendored RRDBNet architecture (BSD-3-Clause, from
-Real-ESRGAN), the pretrained checkpoint (subject to the original project's
-license, not redistributed here), or the anime cover-art images in
+Real-ESRGAN), the pretrained checkpoint (BSD-3-Clause, from Real-ESRGAN; not
+committed here, but the Pages demo serves an ONNX conversion of it), or the anime cover-art images in
 `examples/`/`data/` (copyrighted material used for personal, non-commercial
 research/demonstration purposes only). See [LICENSE](LICENSE) for details
 before reusing anything beyond the code itself.

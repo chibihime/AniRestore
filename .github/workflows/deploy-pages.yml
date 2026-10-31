@@ -1,0 +1,61 @@
+# Builds and deploys the in-browser demo (web/) to GitHub Pages on every push
+# to master. The ONNX model isn't committed: it's exported here from the
+# official Real-ESRGAN checkpoint (downloaded and SHA-256 checked by
+# src/model/restorer.py), with a PyTorch-vs-onnxruntime parity check that
+# fails the deploy if the export is wrong.
+name: Deploy demo to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install export dependencies (CPU-only torch)
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy onnx onnxscript onnxruntime
+
+      - name: Export ONNX model
+        run: python -m src.export_onnx --output _site/model.onnx
+
+      - name: Assemble site
+        run: |
+          cp web/index.html web/upscale.js _site/
+          cp -r examples _site/examples
+          ls examples | python -c "import json, sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))" > _site/examples.json
+          touch _site/.nojekyll
+          # BSD-3 requires the notice to accompany redistributed weights.
+          curl -fsSL https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/LICENSE -o _site/REAL-ESRGAN-LICENSE.txt
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

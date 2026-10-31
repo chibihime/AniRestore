@@ -45,3 +45,7 @@ anirestore.ipynb
 
 # Gradio local cache (share-link certificate, etc.)
 .gradio/
+
+# Built by the Pages workflow from the checkpoint (src/export_onnx.py)
+web/model.onnx
+_site/
